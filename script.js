@@ -1,219 +1,136 @@
 const API_KEY = '10cfd092f533bce4a4cba799d80cd149';
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
-let currentCity = 'Jakarta';
-let units = 'metric'; 
+let currentCity = 'Depok';
+let units = 'metric';
 
 const cityInput = document.getElementById('cityInput');
 const loading = document.getElementById('loading');
-const weatherContent = document.getElementById('weatherContent');
-const errorMessage = document.getElementById('errorMessage');
+const themeToggle = document.getElementById('themeToggle');
+const currentLocationBtn = document.getElementById('currentLocationBtn');
 
 window.addEventListener('load', () => {
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US', options);
-
-    loadFavorites();
+    startClock();
     fetchWeatherData(currentCity);
     
-    setInterval(() => {
-        console.log("Auto-updating weather...");
-        fetchWeatherData(currentCity);
-    }, 300000);
+    setInterval(() => fetchWeatherData(currentCity), 300000);
 });
 
-document.querySelector('.search-box i').addEventListener('click', () => searchCity());
 cityInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') searchCity();
+    if(e.key === 'Enter') {
+        const city = cityInput.value.trim();
+        if(city) {
+            currentCity = city;
+            fetchWeatherData(city);
+        }
+    }
 });
 
-document.getElementById('unitToggle').addEventListener('click', function() {
-    units = units === 'metric' ? 'imperial' : 'metric';
-    this.textContent = units === 'metric' ? '°C' : '°F';
-    fetchWeatherData(currentCity);
-});
-
-document.getElementById('themeToggle').addEventListener('click', () => {
+themeToggle.addEventListener('change', () => {
     document.body.classList.toggle('dark-mode');
 });
 
-document.getElementById('saveCityBtn').addEventListener('click', saveFavorite);
-
-const refreshBtn = document.getElementById('refreshBtn');
-if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => {
-        const icon = refreshBtn.querySelector('i');
-        if(icon) {
-            icon.classList.add('fa-spin');
-            setTimeout(() => icon.classList.remove('fa-spin'), 1000);
-        }
-        fetchWeatherData(currentCity);
-    });
-}
-
-function searchCity() {
-    const city = cityInput.value.trim();
-    if(city) {
-        currentCity = city;
-        fetchWeatherData(city);
+currentLocationBtn.addEventListener('click', () => {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+            alert("Fitur auto-location akan diaktifkan segera!"); 
+        });
     }
+});
+
+function startClock() {
+    const updateTime = () => {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        document.getElementById('clockTime').textContent = `${hours}:${minutes}`;
+        
+        const options = { weekday: 'long', day: 'numeric', month: 'short' };
+        document.getElementById('clockDate').textContent = now.toLocaleDateString('en-US', options);
+    };
+    updateTime();
+    setInterval(updateTime, 1000);
 }
 
 async function fetchWeatherData(city) {
     loading.classList.remove('hidden');
-    errorMessage.classList.add('hidden');
-    weatherContent.style.opacity = '0.5';
-
+    
     try {
-        const currentRes = await fetch(`${BASE_URL}/weather?q=${city}&units=${units}&appid=${API_KEY}`);
-        if (!currentRes.ok) throw new Error('Kota tidak ditemukan / API Error');
-        const currentData = await currentRes.json();
+        const weatherRes = await fetch(`${BASE_URL}/weather?q=${city}&units=${units}&appid=${API_KEY}`);
+        if(!weatherRes.ok) throw new Error("City not found");
+        const weatherData = await weatherRes.json();
 
         const forecastRes = await fetch(`${BASE_URL}/forecast?q=${city}&units=${units}&appid=${API_KEY}`);
         const forecastData = await forecastRes.json();
 
-        updateUI(currentData, forecastData);
-        saveToHistory(city);
+        updateMainUI(weatherData);
+        updateForecastUI(forecastData);
 
     } catch (error) {
-        console.error(error);
-        errorMessage.textContent = "Gagal mengambil data. Cek koneksi atau nama kota.";
-        errorMessage.classList.remove('hidden');
+        alert(error.message);
     } finally {
         loading.classList.add('hidden');
-        weatherContent.style.opacity = '1';
     }
 }
 
-function updateUI(current, forecast) {
-    document.getElementById('cityName').textContent = `${current.name}, ${current.sys.country}`;
-    document.getElementById('condition').textContent = current.weather[0].main;
-    document.getElementById('temperature').textContent = Math.round(current.main.temp) + '°';
-    document.getElementById('weatherIcon').src = `https://openweathermap.org/img/wn/${current.weather[0].icon}@4x.png`;
-    
-    const speedUnit = units === 'metric' ? 'm/s' : 'mph';
-    document.getElementById('windSpeed').textContent = `${Math.round(current.wind.speed)} ${speedUnit}`;
-    document.getElementById('humidity').textContent = `${current.main.humidity}%`;
-    document.getElementById('visibility').textContent = `${(current.visibility/1000).toFixed(1)} km`;
+function updateMainUI(data) {
+    document.getElementById('cityName').textContent = data.name;
 
-    const dailyData = forecast.list.filter(item => item.dt_txt.includes("12:00:00")).slice(0, 5);
-    const forecastGrid = document.getElementById('forecastGrid');
-    forecastGrid.innerHTML = '';
+    document.getElementById('temperature').textContent = Math.round(data.main.temp) + '°C';
+    document.getElementById('feelsLike').textContent = Math.round(data.main.feels_like) + '°C';
+    document.getElementById('condition').textContent = data.weather[0].main;
+    document.getElementById('weatherIcon').src = `https://openweathermap.org/img/wn/${data.weather[0].icon}@4x.png`;
+    
+    document.getElementById('humidity').textContent = data.main.humidity + '%';
+    document.getElementById('windSpeed').textContent = Math.round(data.wind.speed) + ' km/h';
+    document.getElementById('pressure').textContent = data.main.pressure + ' hPa';
+    document.getElementById('uvIndex').textContent = 'Med';
+
+    const sunrise = new Date(data.sys.sunrise * 1000);
+    const sunset = new Date(data.sys.sunset * 1000);
+    document.getElementById('sunriseTime').textContent = sunrise.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false});
+    document.getElementById('sunsetTime').textContent = sunset.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false});
+}
+
+function updateForecastUI(data) {
+    const list = data.list;
+
+    const dailyData = list.filter(item => item.dt_txt.includes("12:00:00")).slice(0, 5);
+    const daysContainer = document.getElementById('forecastDaysContainer');
+    daysContainer.innerHTML = '';
 
     dailyData.forEach(day => {
         const date = new Date(day.dt * 1000);
-        const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short' });
         
-        const maxTemp = Math.round(day.main.temp_max);
-        const minTemp = Math.round(day.main.temp_min);
-
         const html = `
-        <div class="forecast-item">
-            <div class="day-name">${dayName}</div>
-            <div class="forecast-condition">
-                <img src="https://openweathermap.org/img/wn/${day.weather[0].icon}.png" width="30">
-                <small>${day.weather[0].main}</small>
-            </div>
-            <div class="forecast-temps" style="font-size: 0.9em;">
-                <span style="font-weight:600">${maxTemp}°</span> / <span style="opacity:0.7">${minTemp}°</span>
-            </div>
+        <div class="forecast-row">
+            <img src="https://openweathermap.org/img/wn/${day.weather[0].icon}.png" alt="icon">
+            <div class="f-temp">${Math.round(day.main.temp)}°C</div>
+            <div class="f-day">${dayName}</div>
         </div>`;
-        forecastGrid.innerHTML += html;
+        daysContainer.innerHTML += html;
     });
 
-    updateChart(forecast.list.slice(0, 8));
-}
-
-function updateChart(hourlyData) {
-    const container = document.getElementById('chartContainer');
-    const labels = document.getElementById('chartLabels');
-    container.innerHTML = '';
-    labels.innerHTML = '';
-
-    const maxTemp = Math.max(...hourlyData.map(d => d.main.temp));
+    const hourlyData = list.slice(0, 6);
+    const hourlyContainer = document.getElementById('hourlyContainer');
+    hourlyContainer.innerHTML = '';
 
     hourlyData.forEach(item => {
-        const temp = Math.round(item.main.temp);
         const time = item.dt_txt.split(' ')[1].substring(0, 5);
         
-        const height = (temp / (maxTemp + 5)) * 100; 
-
-        const bar = document.createElement('div');
-        bar.className = 'chart-bar';
-        bar.style.height = `${height}%`;
-        bar.innerHTML = `<span class="bar-tooltip">${temp}°</span>`;
-        container.appendChild(bar);
-
-        const label = document.createElement('div');
-        label.innerText = time;
-        labels.appendChild(label);
+        const windDeg = item.wind.deg;
+        
+        const html = `
+        <div class="hourly-item">
+            <span class="hourly-time">${time}</span>
+            <img src="https://openweathermap.org/img/wn/${item.weather[0].icon}.png" alt="icon">
+            <span class="hourly-temp">${Math.round(item.main.temp)}°C</span>
+            <div class="wind-dir" style="transform: rotate(${windDeg}deg)">
+                <i class="fas fa-location-arrow"></i>
+            </div>
+            <span style="font-size: 0.7rem;">${Math.round(item.wind.speed)}km/h</span>
+        </div>`;
+        hourlyContainer.innerHTML += html;
     });
-}
-
-function saveFavorite() {
-    let favorites = JSON.parse(localStorage.getItem('pastelFav')) || [];
-    if (!favorites.includes(currentCity)) {
-        favorites.push(currentCity);
-        localStorage.setItem('pastelFav', JSON.stringify(favorites));
-        loadFavorites();
-    }
-}
-
-function loadFavorites() {
-    const favorites = JSON.parse(localStorage.getItem('pastelFav')) || [];
-    const container = document.getElementById('favoritesList');
-    container.innerHTML = '';
-
-    if(favorites.length === 0) {
-        container.innerHTML = '<div class="empty-state" style="grid-column: span 3; text-align:center; color:#888; font-size:0.9em;">Belum ada favorit</div>';
-        return;
-    }
-
-    favorites.forEach(city => {
-        const div = document.createElement('div');
-        div.className = 'mini-card';
-        
-        div.innerHTML = `
-            <span>${city}</span>
-            <i class="fas fa-times" style="margin-left: 8px; color: #ff5252; cursor: pointer;" title="Hapus"></i>
-        `;
-        
-        div.addEventListener('click', () => {
-            currentCity = city;
-            fetchWeatherData(city);
-        });
-        const deleteIcon = div.querySelector('.fa-times');
-        deleteIcon.addEventListener('click', (e) => {
-            e.stopPropagation(); 
-            removeFavorite(city);
-        });
-
-        container.appendChild(div);
-    });
-}
-
-function removeFavorite(cityToDelete) {
-    let favorites = JSON.parse(localStorage.getItem('pastelFav')) || [];
-    
-    favorites = favorites.filter(city => city !== cityToDelete);
-    
-    localStorage.setItem('pastelFav', JSON.stringify(favorites));
-    
-    loadFavorites();
-}
-
-function saveToHistory(city) {
-    let history = JSON.parse(localStorage.getItem('searchHistory')) || [];
-    if (!history.includes(city)) {
-        history.push(city);
-        localStorage.setItem('searchHistory', JSON.stringify(history));
-        
-        const datalist = document.getElementById('citySuggestions');
-        datalist.innerHTML = '';
-        history.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c;
-            datalist.appendChild(opt);
-        });
-    }
 }
