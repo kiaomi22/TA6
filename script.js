@@ -128,3 +128,112 @@ function updateForecastUI(forecastList) {
     });
 }
 
+function startRealTimeUpdates() {
+    if (updateInterval) clearInterval(updateInterval);
+    
+    updateInterval = setInterval(() => {
+        console.log('Auto-updating weather data...');
+        fetchWeatherData(currentCity);
+    }, 300000); 
+}
+
+function showLoading(show) {
+    if (show) {
+        loadingIndicator.classList.remove('hidden');
+        document.getElementById('currentWeather').classList.add('hidden');
+        document.getElementById('forecastSection').classList.add('hidden');
+    } else {
+        loadingIndicator.classList.add('hidden');
+    }
+}
+
+function showError(msg) {
+    errorMessage.textContent = msg;
+    errorMessage.classList.remove('hidden');
+}
+
+function updateThemeIcon() {
+    const icon = themeToggle.querySelector('i');
+    if (isDarkMode) {
+        icon.classList.remove('fa-moon');
+        icon.classList.add('fa-sun');
+    } else {
+        icon.classList.remove('fa-sun');
+        icon.classList.add('fa-moon');
+    }
+}
+
+function saveFavoriteCity() {
+    let favorites = JSON.parse(localStorage.getItem('weatherFavorites')) || [];
+    if (!favorites.includes(currentCity)) {
+        favorites.push(currentCity);
+        localStorage.setItem('weatherFavorites', JSON.stringify(favorites));
+        loadFavorites();
+    }
+}
+
+function loadFavorites() {
+    const favorites = JSON.parse(localStorage.getItem('weatherFavorites')) || [];
+    const list = document.getElementById('favoritesList');
+    const container = document.getElementById('favoritesSection');
+    
+    list.innerHTML = '';
+    
+    if (favorites.length > 0) {
+        container.classList.remove('hidden');
+        favorites.forEach(city => {
+            const chip = document.createElement('span');
+            chip.className = 'chip';
+            chip.innerHTML = `${city} <i class="fas fa-times" onclick="removeFavorite('${city}')"></i>`;
+            
+            chip.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'I') {
+                    currentCity = city;
+                    cityInput.value = city;
+                    fetchWeatherData(city);
+                }
+            });
+            list.appendChild(chip);
+        });
+    } else {
+        container.classList.add('hidden');
+    }
+}
+
+window.removeFavorite = function(city) {
+    let favorites = JSON.parse(localStorage.getItem('weatherFavorites')) || [];
+    favorites = favorites.filter(c => c !== city);
+    localStorage.setItem('weatherFavorites', JSON.stringify(favorites));
+    loadFavorites();
+};
+
+function saveToHistory(city) {
+    // Digunakan untuk Auto-complete suggestions [cite: 1050]
+    let history = JSON.parse(localStorage.getItem('searchHistory')) || [];
+    if (!history.includes(city)) {
+        history.push(city);
+        localStorage.setItem('searchHistory', JSON.stringify(history));
+    }
+    updateSuggestions();
+}
+
+function updateSuggestions() {
+    const history = JSON.parse(localStorage.getItem('searchHistory')) || [];
+    const datalist = document.getElementById('citySuggestions');
+    datalist.innerHTML = '';
+    history.forEach(city => {
+        const option = document.createElement('option');
+        option.value = city;
+        datalist.appendChild(option);
+    });
+}
+
+function loadPreferences() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        isDarkMode = true;
+    }
+    updateThemeIcon();
+    updateSuggestions();
+}
