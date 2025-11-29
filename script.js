@@ -7,6 +7,7 @@ let units = 'metric';
 const cityInput = document.getElementById('cityInput');
 const loading = document.getElementById('loading');
 const weatherContent = document.getElementById('weatherContent');
+const errorMessage = document.getElementById('errorMessage');
 
 window.addEventListener('load', () => {
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -14,6 +15,11 @@ window.addEventListener('load', () => {
 
     loadFavorites();
     fetchWeatherData(currentCity);
+    
+    setInterval(() => {
+        console.log("Auto-updating weather...");
+        fetchWeatherData(currentCity);
+    }, 300000);
 });
 
 document.querySelector('.search-box i').addEventListener('click', () => searchCity());
@@ -33,6 +39,18 @@ document.getElementById('themeToggle').addEventListener('click', () => {
 
 document.getElementById('saveCityBtn').addEventListener('click', saveFavorite);
 
+const refreshBtn = document.getElementById('refreshBtn');
+if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => {
+        const icon = refreshBtn.querySelector('i');
+        if(icon) {
+            icon.classList.add('fa-spin');
+            setTimeout(() => icon.classList.remove('fa-spin'), 1000);
+        }
+        fetchWeatherData(currentCity);
+    });
+}
+
 function searchCity() {
     const city = cityInput.value.trim();
     if(city) {
@@ -43,11 +61,12 @@ function searchCity() {
 
 async function fetchWeatherData(city) {
     loading.classList.remove('hidden');
+    errorMessage.classList.add('hidden');
     weatherContent.style.opacity = '0.5';
 
     try {
         const currentRes = await fetch(`${BASE_URL}/weather?q=${city}&units=${units}&appid=${API_KEY}`);
-        if (!currentRes.ok) throw new Error('City not found');
+        if (!currentRes.ok) throw new Error('Kota tidak ditemukan / API Error');
         const currentData = await currentRes.json();
 
         const forecastRes = await fetch(`${BASE_URL}/forecast?q=${city}&units=${units}&appid=${API_KEY}`);
@@ -57,7 +76,9 @@ async function fetchWeatherData(city) {
         saveToHistory(city);
 
     } catch (error) {
-        alert(error.message);
+        console.error(error);
+        errorMessage.textContent = "Gagal mengambil data. Cek koneksi atau nama kota.";
+        errorMessage.classList.remove('hidden');
     } finally {
         loading.classList.add('hidden');
         weatherContent.style.opacity = '1';
@@ -70,7 +91,8 @@ function updateUI(current, forecast) {
     document.getElementById('temperature').textContent = Math.round(current.main.temp) + '°';
     document.getElementById('weatherIcon').src = `https://openweathermap.org/img/wn/${current.weather[0].icon}@4x.png`;
     
-    document.getElementById('windSpeed').textContent = `${Math.round(current.wind.speed)} ${units==='metric'?'m/s':'mph'}`;
+    const speedUnit = units === 'metric' ? 'm/s' : 'mph';
+    document.getElementById('windSpeed').textContent = `${Math.round(current.wind.speed)} ${speedUnit}`;
     document.getElementById('humidity').textContent = `${current.main.humidity}%`;
     document.getElementById('visibility').textContent = `${(current.visibility/1000).toFixed(1)} km`;
 
@@ -82,6 +104,9 @@ function updateUI(current, forecast) {
         const date = new Date(day.dt * 1000);
         const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
         
+        const maxTemp = Math.round(day.main.temp_max);
+        const minTemp = Math.round(day.main.temp_min);
+
         const html = `
         <div class="forecast-item">
             <div class="day-name">${dayName}</div>
@@ -89,7 +114,9 @@ function updateUI(current, forecast) {
                 <img src="https://openweathermap.org/img/wn/${day.weather[0].icon}.png" width="30">
                 <small>${day.weather[0].main}</small>
             </div>
-            <div class="forecast-temps">${Math.round(day.main.temp)}°</div>
+            <div class="forecast-temps" style="font-size: 0.9em;">
+                <span style="font-weight:600">${maxTemp}°</span> / <span style="opacity:0.7">${minTemp}°</span>
+            </div>
         </div>`;
         forecastGrid.innerHTML += html;
     });
@@ -107,7 +134,7 @@ function updateChart(hourlyData) {
 
     hourlyData.forEach(item => {
         const temp = Math.round(item.main.temp);
-        const time = item.dt_txt.split(' ')[1].substring(0, 5); 
+        const time = item.dt_txt.split(' ')[1].substring(0, 5);
         
         const height = (temp / (maxTemp + 5)) * 100; 
 
@@ -138,20 +165,41 @@ function loadFavorites() {
     container.innerHTML = '';
 
     if(favorites.length === 0) {
-        container.innerHTML = '<div class="empty-state" style="grid-column: span 3; text-align:center; color:#aaa;">No favorites yet</div>';
+        container.innerHTML = '<div class="empty-state" style="grid-column: span 3; text-align:center; color:#888; font-size:0.9em;">Belum ada favorit</div>';
         return;
     }
 
     favorites.forEach(city => {
         const div = document.createElement('div');
         div.className = 'mini-card';
-        div.innerHTML = `<b>${city}</b>`;
-        div.onclick = () => {
+        
+        div.innerHTML = `
+            <span>${city}</span>
+            <i class="fas fa-times" style="margin-left: 8px; color: #ff5252; cursor: pointer;" title="Hapus"></i>
+        `;
+        
+        div.addEventListener('click', () => {
             currentCity = city;
             fetchWeatherData(city);
-        };
+        });
+        const deleteIcon = div.querySelector('.fa-times');
+        deleteIcon.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            removeFavorite(city);
+        });
+
         container.appendChild(div);
     });
+}
+
+function removeFavorite(cityToDelete) {
+    let favorites = JSON.parse(localStorage.getItem('pastelFav')) || [];
+    
+    favorites = favorites.filter(city => city !== cityToDelete);
+    
+    localStorage.setItem('pastelFav', JSON.stringify(favorites));
+    
+    loadFavorites();
 }
 
 function saveToHistory(city) {

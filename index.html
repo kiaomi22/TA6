@@ -28,10 +28,15 @@
 
         <main class="dashboard">
             <header class="top-bar">
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="cityInput" placeholder="Search City..." list="citySuggestions">
-                    <datalist id="citySuggestions"></datalist>
+                <div class="search-group" style="display:flex; gap:10px; align-items:center;">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="cityInput" placeholder="Search City..." list="citySuggestions">
+                        <datalist id="citySuggestions"></datalist>
+                    </div>
+                    <button id="refreshBtn" style="background:var(--card-bg); border:none; padding:10px; border-radius:12px; cursor:pointer; color:var(--text-secondary); box-shadow:var(--shadow);">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
                 </div>
                 <div class="user-profile">
                     <span id="dateDisplay">Today</span>
