@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Dashboard</title>
+    <title>Pastel Weather Complete</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -12,59 +12,64 @@
     <div class="container">
         
         <header class="top-bar">
-            <div class="toggle-container">
-                <label class="switch">
-                    <input type="checkbox" id="themeToggle">
-                    <span class="slider round"></span>
-                </label>
-                <span class="toggle-label">Dark Mode</span>
+            <div class="controls-left">
+                <div class="toggle-container">
+                    <label class="switch">
+                        <input type="checkbox" id="themeToggle">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="toggle-label">Dark Mode</span>
+                </div>
+                <button id="unitToggle" class="unit-btn">°C</button>
             </div>
             
             <div class="search-bar">
                 <i class="fas fa-search"></i>
-                <input type="text" id="cityInput" placeholder="Search for your preferred city..." list="citySuggestions">
+                <input type="text" id="cityInput" placeholder="Search city..." list="citySuggestions">
                 <datalist id="citySuggestions"></datalist>
+                <i class="fas fa-sync-alt refresh-icon" id="refreshBtn" title="Refresh Data"></i>
             </div>
 
             <button class="location-btn" id="currentLocationBtn">
-                <i class="fas fa-map-marker-alt"></i> Current Location
+                <i class="fas fa-map-marker-alt"></i> Current
             </button>
         </header>
 
         <div class="dashboard-grid">
             
             <div class="card clock-card">
-                <h2 id="cityName">Jakarta</h2>
+                <div class="city-header">
+                    <h2 id="cityName">Jakarta</h2>
+                    <i class="far fa-star fav-btn" id="saveCityBtn" title="Add to Favorites"></i>
+                </div>
+                
                 <div class="digital-clock" id="clockTime">00:00</div>
                 <div class="date-display" id="clockDate">Monday, 1 Jan</div>
+
+                <div class="favorites-list" id="favoritesContainer">
+                    </div>
             </div>
 
             <div class="card main-weather-card">
                 <div class="temp-section">
-                    <h1 id="temperature">28°C</h1>
-                    <p>Feels like: <span id="feelsLike">30°C</span></p>
+                    <h1 id="temperature">--°</h1>
+                    <p>Feels like: <span id="feelsLike">--°</span></p>
                     
                     <div class="sun-times">
                         <div class="sun-item">
                             <i class="fas fa-arrow-up"></i>
-                            <div>
-                                <span>Sunrise</span>
-                                <span id="sunriseTime">--:--</span>
-                            </div>
+                            <span id="sunriseTime">--:--</span>
                         </div>
                         <div class="sun-item">
                             <i class="fas fa-arrow-down"></i>
-                            <div>
-                                <span>Sunset</span>
-                                <span id="sunsetTime">--:--</span>
-                            </div>
+                            <span id="sunsetTime">--:--</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="icon-section">
                     <img id="weatherIcon" src="" alt="Weather Icon">
-                    <h3 id="condition">Sunny</h3>
+                    <h3 id="condition">--</h3>
                 </div>
 
                 <div class="details-grid-right">
@@ -75,8 +80,8 @@
                     </div>
                     <div class="detail-box">
                         <i class="fas fa-wind"></i>
-                        <span id="windSpeed">-- km/h</span>
-                        <small>Wind Speed</small>
+                        <span id="windSpeed">--</span>
+                        <small>Wind</small>
                     </div>
                     <div class="detail-box">
                         <i class="fas fa-tachometer-alt"></i>
@@ -94,13 +99,13 @@
             <div class="card forecast-days-card">
                 <h3>5 Days Forecast:</h3>
                 <div class="forecast-list-vertical" id="forecastDaysContainer">
-                </div>
+                    </div>
             </div>
 
             <div class="card hourly-card">
                 <h3>Hourly Forecast:</h3>
                 <div class="hourly-scroll-container" id="hourlyContainer">
-                </div>
+                    </div>
             </div>
 
         </div>
